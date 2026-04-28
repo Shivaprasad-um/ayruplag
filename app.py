@@ -128,7 +128,7 @@ corpus = [
 "natural treatments reduce side effects compared to synthetic drugs",
 "proper lifestyle supports overall physical and mental health",
 "body cleansing is important for maintaining internal purity",
-"healthy routines improve longevity and quality of life"
+"healthy routines improve longevity and quality of life" ]
 corpus_clean = [clean_text(s) for s in corpus]
 
 # -------------------------
