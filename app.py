@@ -1,30 +1,33 @@
 from flask import Flask, request, jsonify, render_template
 import json
-import torch
 import requests
 from bs4 import BeautifulSoup
-from sentence_transformers import SentenceTransformer, util
 import nltk
 from nltk.tokenize import sent_tokenize
 import re
 import os
 
-# Download NLTK
+# ML imports (lazy load later)
+from sentence_transformers import SentenceTransformer, util
+
+# Download tokenizer
 nltk.download('punkt')
 nltk.download('punkt_tab')
 
 app = Flask(__name__)
 
 # -------------------------
-# Load Model
+# GLOBAL LAZY VARIABLES
 # -------------------------
-model = SentenceTransformer('all-MiniLM-L6-v2')
+model = None
+dataset_embeddings = None
+corpus_embeddings = None
 
 # -------------------------
 # Ayurvedic Stopwords
 # -------------------------
 ayurveda_stopwords = {
-    "ayurveda", "ayurvedic", "panchakarma", "vata", "pitta", "kapha",
+    "ayurveda", "panchakarma", "vata", "pitta", "kapha",
     "dosha", "doshas", "agni", "ama", "prakriti", "vikriti",
     "rasayana", "dinacharya", "ritucharya", "herbal",
     "therapy", "treatment", "medicine", "body", "health",
@@ -32,31 +35,25 @@ ayurveda_stopwords = {
 }
 
 # -------------------------
-# Clean Text Function
+# Clean text
 # -------------------------
 def clean_text(text):
     text = text.lower()
     words = re.findall(r'\b\w+\b', text)
-    filtered = [w for w in words if w not in ayurveda_stopwords]
-    return " ".join(filtered)
+    return " ".join([w for w in words if w not in ayurveda_stopwords])
 
 # -------------------------
-# Load Dataset
+# Load dataset
 # -------------------------
 with open("dataset.json") as f:
     dataset = json.load(f)
 
 dataset_sentences = [d["sentence"] for d in dataset]
 dataset_sources = [d["source"] for d in dataset]
-
-# Clean dataset
-dataset_sentences_clean = [clean_text(s) for s in dataset_sentences]
-
-# Precompute embeddings
-dataset_embeddings = model.encode(dataset_sentences_clean, convert_to_tensor=True)
+dataset_clean = [clean_text(s) for s in dataset_sentences]
 
 # -------------------------
-# Ayurvedic Corpus
+# Corpus
 # -------------------------
 corpus = [
 "ayurveda is a traditional system of medicine that focuses on balance between body mind and spirit",
@@ -132,39 +129,65 @@ corpus = [
 "proper lifestyle supports overall physical and mental health",
 "body cleansing is important for maintaining internal purity",
 "healthy routines improve longevity and quality of life"
-]
-
 corpus_clean = [clean_text(s) for s in corpus]
-corpus_embeddings = model.encode(corpus_clean, convert_to_tensor=True)
 
 # -------------------------
-# Improved URL Extractor
+# Lazy Load Model
+# -------------------------
+def get_model():
+    global model
+    if model is None:
+        print("🔄 Loading model...")
+        model = SentenceTransformer('all-MiniLM-L6-v2')
+    return model
+
+# -------------------------
+# Lazy Dataset Embeddings
+# -------------------------
+def get_dataset_embeddings():
+    global dataset_embeddings
+    if dataset_embeddings is None:
+        print("🔄 Encoding dataset...")
+        dataset_embeddings = get_model().encode(dataset_clean, convert_to_tensor=True)
+    return dataset_embeddings
+
+# -------------------------
+# Lazy Corpus Embeddings
+# -------------------------
+def get_corpus_embeddings():
+    global corpus_embeddings
+    if corpus_embeddings is None:
+        print("🔄 Encoding corpus...")
+        corpus_embeddings = get_model().encode(corpus_clean, convert_to_tensor=True)
+    return corpus_embeddings
+
+# -------------------------
+# URL Extractor (Improved)
 # -------------------------
 def extract_from_url(url):
     try:
         headers = {"User-Agent": "Mozilla/5.0"}
-        response = requests.get(url, headers=headers, timeout=10)
+        res = requests.get(url, headers=headers, timeout=10)
 
-        if response.status_code != 200:
+        if res.status_code != 200:
             return ""
 
-        soup = BeautifulSoup(response.text, "html.parser")
+        soup = BeautifulSoup(res.text, "html.parser")
 
-        # Remove unwanted elements
+        # Remove junk
         for tag in soup(["script", "style", "nav", "footer", "header"]):
             tag.decompose()
 
-        # Extract meaningful text
         paragraphs = soup.find_all("p")
 
         text = " ".join([p.get_text(strip=True) for p in paragraphs])
 
-        print("Extracted length:", len(text))
+        print("✅ Extracted length:", len(text))
 
         return text.strip()
 
     except Exception as e:
-        print("URL error:", e)
+        print("❌ URL error:", e)
         return ""
 
 # -------------------------
@@ -174,28 +197,27 @@ def check_plagiarism(text):
 
     sentences = sent_tokenize(text)
 
-    best_result = None
     best_score = 0
+    best_result = None
 
     for sentence in sentences:
 
         if len(sentence.strip()) < 25:
             continue
 
-        cleaned_sentence = clean_text(sentence)
-
-        if not cleaned_sentence:
+        cleaned = clean_text(sentence)
+        if not cleaned:
             continue
 
-        input_emb = model.encode(cleaned_sentence, convert_to_tensor=True)
+        input_emb = get_model().encode(cleaned, convert_to_tensor=True)
 
-        # Dataset similarity
-        d_scores = util.cos_sim(input_emb, dataset_embeddings)[0]
+        # Compare dataset
+        d_scores = util.cos_sim(input_emb, get_dataset_embeddings())[0]
         d_idx = d_scores.argmax()
         d_score = float(d_scores[d_idx])
 
-        # Corpus similarity
-        c_scores = util.cos_sim(input_emb, corpus_embeddings)[0]
+        # Compare corpus
+        c_scores = util.cos_sim(input_emb, get_corpus_embeddings())[0]
         c_idx = c_scores.argmax()
         c_score = float(c_scores[c_idx])
 
@@ -245,25 +267,21 @@ def check():
     text = data.get("text")
     url = data.get("url")
 
-    # URL handling
-    if url and url.strip() != "":
+    # URL input
+    if url and url.strip():
         text = extract_from_url(url)
 
         if not text:
-            return jsonify({
-                "error": "❌ Could not extract text from URL"
-            })
+            return jsonify({"error": "❌ Could not extract text from URL"})
 
         text = text[:3000]  # limit size
 
-    if not text or text.strip() == "":
-        return jsonify({
-            "error": "❌ Please enter text or URL"
-        })
+    if not text or not text.strip():
+        return jsonify({"error": "❌ Enter text or URL"})
 
     result = check_plagiarism(text)
 
-    print("FINAL RESULT:", result)
+    print("✅ RESULT:", result)
 
     return jsonify(result)
 
@@ -271,5 +289,6 @@ def check():
 # Run
 # -------------------------
 if __name__ == "__main__":
+    print("🚀 Starting server...")
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
