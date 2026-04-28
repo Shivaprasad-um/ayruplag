@@ -1,0 +1,10 @@
+flask
+sentence-transformers
+torch --index-url https://download.pytorch.org/whl/cpu
+requests
+beautifulsoup4
+nltk
+gunicorn
+PyPDF2
+nltk
+pandas

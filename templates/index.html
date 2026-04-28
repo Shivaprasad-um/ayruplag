@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AyurPlag</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="container">
+    <h1>🌿 Ayurvedic Plagiarism Checker</h1>
+
+    <div class="card">
+        <textarea id="text" placeholder="Enter text..."></textarea>
+
+        <input type="text" id="url" placeholder="Enter URL (optional)">
+
+        <button onclick="check()">Check</button>
+    </div>
+
+    <div class="card">
+        <h2>Result</h2>
+        <div id="result">No result yet</div>
+    </div>
+</div>
+
+<script>
+function getLevel(score){
+    if(score > 80) return "🔴 High";
+    if(score > 50) return "🟡 Medium";
+    return "🟢 Low";
+}
+
+function check() {
+    let text = document.getElementById("text").value.trim();
+    let url = document.getElementById("url").value.trim();
+
+    // ✅ Validation
+    if(!text && !url){
+        document.getElementById("result").innerHTML = "❌ Please enter text or URL";
+        return;
+    }
+
+    // ✅ Loading state
+    document.getElementById("result").innerHTML = "⏳ Checking...";
+
+    fetch("/check", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({text: text, url: url})
+    })
+    .then(res => res.json())
+    .then(data => {
+
+        console.log(data);
+
+        if(data.error){
+            document.getElementById("result").innerHTML = data.error;
+            return;
+        }
+
+        let level = getLevel(data.score);
+
+        document.getElementById("result").innerHTML = `
+            <div style="line-height:1.6">
+                <p><b>🧾 Input:</b><br>${data.input}</p>
+
+                <p><b>🔍 Matched Sentence:</b><br>${data.match}</p>
+
+                <p><b>📄 Source:</b> ${data.source}</p>
+
+                <p><b>📊 Type:</b> ${data.type}</p>
+
+                <p><b>📈 Similarity Score:</b> ${data.score}% (${level})</p>
+            </div>
+        `;
+    })
+    .catch(err => {
+        document.getElementById("result").innerHTML = "❌ Error occurred";
+        console.log(err);
+    });
+}
+</script>
+
+</body>
+</html>

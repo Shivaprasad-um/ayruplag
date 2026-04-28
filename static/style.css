@@ -1,0 +1,38 @@
+body {
+    font-family: Arial;
+    background: #f4f7f6;
+}
+
+.container {
+    width: 70%;
+    margin: auto;
+}
+
+.card {
+    background: white;
+    padding: 20px;
+    margin-top: 20px;
+    border-radius: 10px;
+}
+
+textarea {
+    width: 100%;
+    height: 120px;
+}
+
+input {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+}
+
+button {
+    background: green;
+    color: white;
+    padding: 10px;
+    margin-top: 10px;
+    border: none;
+}
+#result {
+    word-wrap: break-word;
+}
