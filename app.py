@@ -91,23 +91,27 @@ print("✅ Dataset loaded:", len(dataset_sentences))
 # CORPUS
 
 corpus = [
-    "ayurveda focuses on maintaining balance between body mind and spirit",
-    "tridosha includes vata pitta and kapha which regulate body functions",
-    "agni controls digestion and metabolism in the body",
-    "panchakarma is used for detoxification and cleansing",
-    "rasayana therapy promotes longevity and rejuvenation",
-    "ama is formed due to improper digestion and leads to disease",
-    "prakriti represents individual body constitution",
-    "vikriti indicates imbalance in the body",
-    "herbal medicines are used for natural healing",
-    "healthy digestion is essential for overall wellness",
-    "balanced diet supports proper metabolic function",
-    "detoxification removes toxins and improves health",
-    "ojas represents immunity and vitality",
-    "dhatus are body tissues responsible for structure",
-    "lifestyle and routine play a key role in maintaining health"
+    "ayurveda is an ancient indian system of medicine that emphasizes balance between mind body and spirit",
+    "the concept of tridosha describes three fundamental energies vata pitta and kapha that govern physiological processes",
+    "vata is associated with movement and controls the nervous system and circulation",
+    "pitta is linked to metabolism digestion and body temperature regulation",
+    "kapha is responsible for structure stability and lubrication in the body",
+    "agni or digestive fire plays a key role in transforming food into energy",
+    "ama refers to toxic substances that accumulate due to incomplete digestion",
+    "panchakarma is a set of therapeutic procedures aimed at cleansing the body of toxins",
+    "rasayana therapies are used to promote longevity enhance immunity and rejuvenate the body",
+    "ayurvedic treatments often include herbal medicines dietary changes and lifestyle modifications",
+    "prakriti represents an individual's natural constitution determined at birth",
+    "vikriti reflects the current state of imbalance in the body",
+    "dinacharya refers to daily routines that support physical and mental health",
+    "ritucharya involves adapting lifestyle and diet according to seasonal changes",
+    "herbal formulations in ayurveda are prepared using natural plant based ingredients",
+    "ashwagandha is commonly used for stress reduction and improving vitality",
+    "turmeric is known for its anti inflammatory and antioxidant properties",
+    "triphala is a traditional formulation used to support digestion and detoxification",
+    "neem is widely used for its antimicrobial and blood purifying effects",
+    "ayurveda emphasizes preventive healthcare and maintaining harmony with nature"
 ]
-
 corpus_clean = [clean_text(s) for s in corpus]
 
 
